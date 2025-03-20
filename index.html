@@ -1,0 +1,170 @@
+    <!DOCTYPE html>
+<html>
+<head>
+    <title>Gastric Surgery Diet Reminders</title>
+    <link rel="shortcut icon" type="image/x-icon" href="favicon.ico"  >
+    <style>
+        .time-input {
+            margin-bottom: 10px;
+        }
+        #currentTime {
+            text-align: center;
+            font-size: 100px;
+            margin-bottom: 20px;
+        }
+        input[type="time"] {
+            padding: 1px 15px 1px 10px; 
+            height: 40px;
+            font-size: 16px; 
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            height: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div id="currentTime"></div>
+    
+    <h1>Gastric Surgery Diet Reminders</h1>
+
+    <div class="time-input">
+        <label>First Meal Time: </label><input type="time" id="startTime" value="07:30">
+         &emsp;
+        <button onclick="rescheduleSounds()">Reschedule</button>
+        &emsp;|&emsp;
+        <button onclick="stopSounds()">&#9632;</button>
+
+    </div>
+
+	
+	<div id="scheduledNotifications">
+        <h2>Scheduled Notifications:</h2>
+    </div>
+
+<script>
+        let scheduledTimeouts = []; 
+        let scheduledEvents = []; 
+
+        function scheduleSounds() {
+            const startTimeInput = document.getElementById('startTime');
+            const startTimeValue = startTimeInput.value;
+            const scheduledNotificationsDiv = document.getElementById('scheduledNotifications');
+
+            // Clear previous notifications and timeouts
+            while (scheduledNotificationsDiv.children.length > 1) {
+                scheduledNotificationsDiv.removeChild(scheduledNotificationsDiv.lastChild);
+            }
+            scheduledTimeouts.forEach(clearTimeout);
+            scheduledTimeouts = [];
+            scheduledEvents = [];
+
+            if (startTimeValue) {
+                const [hours, minutes] = startTimeValue.split(':').map(Number);
+                const now = new Date();
+                const startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
+
+                const schedule = [
+                    { sound: 'sound1.mp3', message: 'Time to Eat Food', offsets: [0, 2, 5, 8, 10, 12] },
+                    { sound: 'sound2.mp3', message: 'STOP Drinking!!!', offsets: [-0.5, 1.5, 4.5, 7.5, 9.5, 11.5] },
+                    { sound: 'sound3.mp3', message: 'You may Resume Drinking.', offsets: [0.5, 2.5, 5.5, 8.5, 10.5, 12.5] }
+                ];
+
+                schedule.forEach(item => {
+                    item.offsets.forEach(offset => {
+                        const soundTime = new Date(startDate);
+                        soundTime.setMinutes(soundTime.getMinutes() + offset * 60); // Corrected calculation
+                        const delay = soundTime - now;
+
+                        if (delay > 0) {
+                            const timeoutId = setTimeout(() => {
+                                playSound(item.sound, item.message);
+                            }, delay);
+                            scheduledTimeouts.push(timeoutId); // Store timeout ID
+                            console.log(`${item.message} scheduled for ${soundTime}`);
+
+                            scheduledEvents.push({
+                                message: item.message,
+                                time: soundTime
+                            });
+                        }
+                    });
+                });
+
+                // Sort scheduled events by time
+                scheduledEvents.sort((a, b) => a.time - b.time);
+
+                // Add sorted notifications to HTML
+                scheduledEvents.forEach(event => {
+                    const notificationParagraph = document.createElement('p');
+                    notificationParagraph.textContent = `${formatDateTime(event.time)} ... ${event.message}`;
+                    scheduledNotificationsDiv.appendChild(notificationParagraph);
+                });
+            }
+        }
+
+        function playSound(soundFile, message) {
+            const audio = new Audio(soundFile);
+            audio.play().catch(error => console.error("Error playing sound:", error));
+            showAlert(message);
+            currentAudio = audio;
+        }
+
+        function showAlert(message) {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(message);
+            } else {
+                alert(message); // Fallback to alert if notifications are not supported or granted
+            }
+        }
+
+        if ('Notification' in window) {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    console.log('Notifications permission granted.');
+                }
+            });
+        }
+
+        function rescheduleSounds() {
+            scheduleSounds();
+        }
+
+	
+        window.onload = function() {
+            scheduleSounds();
+            updateCurrentTime();
+            setInterval(updateCurrentTime, 1000);
+        };
+
+        function formatDateTime(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
+    
+        function updateCurrentTime() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('currentTime').textContent = `${hours}:${minutes}:${seconds}`;
+        }
+    
+        function stopSounds() {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0; // Reset playback to the beginning
+                currentAudio = null; // Clear the stored audio
+            }
+        }
+    
+    </script>
+</body>
+</html>
